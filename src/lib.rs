@@ -78,7 +78,6 @@ fn get_json(path: &str, query: &[(&str, &str)]) -> Result<Value, OnlineError> {
     Ok(v)
 }
 
-/// Full flow (blocking). Run inside spawn_blocking when called from async code.
 pub fn check_online_blocking(player_id: &str) -> Result<OnlineResult, OnlineError> {
     if !player_id.chars().all(|c| c.is_ascii_digit()) || !(8..=20).contains(&player_id.len()) {
         return Err(OnlineError::InvalidId);
@@ -107,7 +106,6 @@ pub fn check_online_blocking(player_id: &str) -> Result<OnlineResult, OnlineErro
                 }
                 if state == "searching_profile" {
                     poll_token = prepared.get("pollToken").and_then(|x| x.as_str()).map(String::from);
-                    // poll status
                     if let Some(pt) = poll_token.clone() {
                         for _ in 0..120 {
                             thread::sleep(Duration::from_millis(1250));
@@ -158,7 +156,6 @@ pub fn check_online_blocking(player_id: &str) -> Result<OnlineResult, OnlineErro
     })
 }
 
-/// Async wrapper for use from tokio.
 pub async fn check_online(player_id: &str) -> Result<OnlineResult, OnlineError> {
     let id = player_id.to_string();
     tokio::task::spawn_blocking(move || check_online_blocking(&id))
