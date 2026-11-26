@@ -37,11 +37,11 @@ impl std::fmt::Display for OnlineError {
 fn post_json(path: &str, body: &Value) -> Result<Value, OnlineError> {
     let url = format!("{BASE}{path}");
     let resp = ureq::post(&url)
-        .set("User-Agent", UA)
-        .set("Referer", REFERER)
-        .set("X-FFJ-FF-Tool", "online")
-        .set("X-FFJ-Language", "pt-BR")
-        .set("Content-Type", "application/json")
+        .header("User-Agent", UA)
+        .header("Referer", REFERER)
+        .header("X-FFJ-FF-Tool", "online")
+        .header("X-FFJ-Language", "pt-BR")
+        .header("Content-Type", "application/json")
         .send_json(body)
         .map_err(|e| OnlineError::Upstream(e.to_string()))?;
     let status = resp.status();
@@ -60,10 +60,10 @@ fn post_json(path: &str, body: &Value) -> Result<Value, OnlineError> {
 fn get_json(path: &str, query: &[(&str, &str)]) -> Result<Value, OnlineError> {
     let url = format!("{BASE}{path}");
     let mut req = ureq::get(&url)
-        .set("User-Agent", UA)
-        .set("Referer", REFERER)
-        .set("X-FFJ-FF-Tool", "online")
-        .set("X-FFJ-Language", "pt-BR");
+        .header("User-Agent", UA)
+        .header("Referer", REFERER)
+        .header("X-FFJ-FF-Tool", "online")
+        .header("X-FFJ-Language", "pt-BR");
     for (k, v) in query {
         req = req.query(k, v);
     }
