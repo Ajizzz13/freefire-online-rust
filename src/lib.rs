@@ -165,5 +165,3 @@ pub async fn check_online(player_id: &str) -> Result<OnlineResult, OnlineError> 
         .await
         .map_err(|e| OnlineError::Upstream(e.to_string()))?
 }
-PY
-echo "written"
