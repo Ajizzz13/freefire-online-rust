@@ -34,28 +34,24 @@ impl std::fmt::Display for OnlineError {
     }
 }
 
+fn agent() -> ureq::Agent {
+    ureq::Agent::config_builder()
+        .http_status_as_error(false)
+        .build()
+        .new_agent()
+}
+
 fn post_json(path: &str, body: &Value) -> Result<Value, OnlineError> {
     let url = format!("{BASE}{path}");
-    let resp = ureq::post(&url)
+    let mut resp = agent()
+        .post(&url)
         .header("User-Agent", UA)
         .header("Referer", REFERER)
         .header("X-FFJ-FF-Tool", "online")
         .header("X-FFJ-Language", "pt-BR")
         .header("Content-Type", "application/json")
-        .send_json(body);
-    let mut resp = match resp {
-        Ok(r) => r,
-        Err(ureq::Error::Status(code, r)) => {
-            let mut body = r.into_body();
-            let text = body.read_to_string().unwrap_or_default();
-            let v: Value = serde_json::from_str(&text).unwrap_or(Value::Null);
-            if code.as_u16() == 429 {
-                return Err(OnlineError::Http(code.as_u16(), v.get("message").and_then(|x| x.as_str()).unwrap_or("rate limited").to_string()));
-            }
-            return Err(OnlineError::Http(code.as_u16(), if text.is_empty() { code.to_string() } else { text }));
-        }
-        Err(e) => return Err(OnlineError::Upstream(e.to_string())),
-    };
+        .send_json(body)
+        .map_err(|e| OnlineError::Upstream(e.to_string()))?;
     let status = resp.status().as_u16();
     let mut body = resp.into_body();
     let text = body.read_to_string().map_err(|e| OnlineError::Parse(e.to_string()))?;
@@ -71,7 +67,8 @@ fn post_json(path: &str, body: &Value) -> Result<Value, OnlineError> {
 
 fn get_json(path: &str, query: &[(&str, &str)]) -> Result<Value, OnlineError> {
     let url = format!("{BASE}{path}");
-    let mut req = ureq::get(&url)
+    let mut req = agent()
+        .get(&url)
         .header("User-Agent", UA)
         .header("Referer", REFERER)
         .header("X-FFJ-FF-Tool", "online")
@@ -79,15 +76,7 @@ fn get_json(path: &str, query: &[(&str, &str)]) -> Result<Value, OnlineError> {
     for (k, v) in query {
         req = req.query(k, v);
     }
-    let resp = match req.call() {
-        Ok(r) => r,
-        Err(ureq::Error::Status(code, r)) => {
-            let mut body = r.into_body();
-            let text = body.read_to_string().unwrap_or_default();
-            return Err(OnlineError::Http(code.as_u16(), if text.is_empty() { code.to_string() } else { text }));
-        }
-        Err(e) => return Err(OnlineError::Upstream(e.to_string())),
-    };
+    let mut resp = req.call().map_err(|e| OnlineError::Upstream(e.to_string()))?;
     let status = resp.status().as_u16();
     let mut body = resp.into_body();
     let text = body.read_to_string().map_err(|e| OnlineError::Parse(e.to_string()))?;
